@@ -1,7 +1,9 @@
+package com.server;
+
 import javax.swing.*;
 import java.awt.event.*;
 
-public class Listener2 extends JDialog {
+public class Listener extends JDialog {
     private JPanel contentPane;
     private JButton buttonListen;
     private JButton buttonCancel;
@@ -18,14 +20,14 @@ public class Listener2 extends JDialog {
         textFieldPort.setEnabled(true);
     }
 
-    public Listener2(JFrame frame, Form form) {
-
+    public Listener(Server form) {
         setContentPane(contentPane);
         setModal(true);
         getRootPane().setDefaultButton(buttonListen);
         setResizable(false);
         setSize(260, 140);
-        setLocationRelativeTo(frame);
+        setLocationRelativeTo((JFrame)form);
+        setTitle("Listener");
 
         if (form.listen) {
             System.out.println("Active");
@@ -68,7 +70,7 @@ public class Listener2 extends JDialog {
 //        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
     }
 
-    private void onListen(Form form) {
+    private void onListen(Server form) {
         //System.out.println("Listen activate");
         if (!form.listen) {
             try {
@@ -86,6 +88,7 @@ public class Listener2 extends JDialog {
         } else {
             buttonListen.setText("Listen");
             setEnableComponent();
+            form.setDisableComponents();
             form.listen = false;
         }
     }
@@ -96,7 +99,7 @@ public class Listener2 extends JDialog {
 
     public static void main(String[] args) {
 /*
-        Listener2 dialog = new Listener2();
+        Listener dialog = new Listener();
         dialog.pack();
         dialog.setVisible(true);
         System.exit(0);

@@ -1,9 +1,12 @@
+package com.server;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class Form extends JFrame {
+public class Server extends JFrame {
+
     JPanel panel1;
     private JTextArea textArea1;
     private JTextField textField1;
@@ -47,10 +50,10 @@ public class Form extends JFrame {
         buttonSend.setEnabled(false);
     }
 
-    Form(String title) {
+    public Server(String title) {
         super(title);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        setContentPane(new Form("Java Chat Server").panel1);
+
         setPreferredSize(new Dimension(400, 450));
         setResizable(false);
         setContentPane(panel1);
@@ -58,17 +61,16 @@ public class Form extends JFrame {
 
         scrollPane = new JScrollPane(textArea1);
         getContentPane().add(scrollPane);
-//        scrollPane.setVerticalScrollBar();
-//        setSize(500, 550);
-//        setSize(1000, 800);
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenuItem listenerItem = new JMenuItem("Listener");
         fileMenu.add(listenerItem);
         listenerItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Listener2 listener = new Listener2(Form.this, Form.this);
+                Listener listener = new Listener(Server.this);
                 listener.setVisible(true);
+//                Listener2 listener = new Listener2(Form.this);
+//                listener.setVisible(true);
             }
         });
         fileMenu.addSeparator();
@@ -84,7 +86,7 @@ public class Form extends JFrame {
         aboutMenu.add(aboutItem);
         aboutItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(Form.this,
+                JOptionPane.showMessageDialog(Server.this,
                         "Simple Chat Server\n\n© 2019. All right reserved",
                         "About",
                         JOptionPane.INFORMATION_MESSAGE);
@@ -93,12 +95,10 @@ public class Form extends JFrame {
         menuBar.add(fileMenu);
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
-//        setPreferredSize(new Dimension(270, 225));
         pack();
         setLocationByPlatform(true);
         setLocationRelativeTo(null);
         textArea1.setEditable(false);
-        //setVisible(true);
         buttonSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -110,5 +110,4 @@ public class Form extends JFrame {
             }
         });
     }
-
 }
