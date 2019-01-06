@@ -1,4 +1,4 @@
-package com.server;
+package com.client;
 
 import com.common.*;
 
@@ -6,22 +6,16 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
-public class Server extends JFrame implements ConnectionListenerInterface, Runnable {
-    JPanel panel1;
+public class Client extends JFrame implements ConnectionListenerInterface {
+    private JPanel panel1;
     private JTextArea textArea1;
     private JTextField textField1;
     private JButton buttonSend;
     private JScrollPane scrollPane;
-    boolean listen;
-    boolean needToNewConnection = true;
-    Set<ConnectionInterface> connections;
-    ServerSocket serverSocket;
+    boolean connect;
+    ConnectionInterface connection;
 
     public void clearTextArea() {
         textArea1.setText("");
@@ -59,11 +53,18 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
         buttonSend.setEnabled(false);
     }
 
-    public Server(String title) {
+    public void setIP(String IP) {
+        this.IP = IP;
+    }
+
+    public String getIP() {
+        return IP;
+    }
+
+    private String IP = Connection.IP;
+
+    Client(String title) {
         super(title);
-
-
-
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setPreferredSize(new Dimension(400, 450));
@@ -75,12 +76,13 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
         getContentPane().add(scrollPane);
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
-        JMenuItem listenerItem = new JMenuItem("Listener");
+        JMenuItem listenerItem = new JMenuItem("Connector");
         fileMenu.add(listenerItem);
         listenerItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Listener listener = new Listener(Server.this);
-                listener.setVisible(true);
+                Connector connector = new Connector(Client.this);
+                connector.setVisible(true);
+
             }
         });
         fileMenu.addSeparator();
@@ -96,8 +98,8 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
         aboutMenu.add(aboutItem);
         aboutItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(Server.this,
-                        "Simple Chat Server\n\n© 2019. All right reserved",
+                JOptionPane.showMessageDialog(Client.this,
+                        "Simple Chat Client\n\n© 2019. All right reserved",
                         "About",
                         JOptionPane.INFORMATION_MESSAGE);
             }
@@ -112,88 +114,45 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
         buttonSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                 if (!textField1.getText().isEmpty()) {
+                if (!textField1.getText().isEmpty()) {
                     String text = textField1.getText().trim();
                     System.out.println(text);
                     Message message = new Message(getNickname(), text, Message.CONTENT_TYPE);
-
-                    try {
-                        for (ConnectionInterface connection : connections) {
-                            connection.send(message);
-                        }
-                    } catch(Exception ex){
-                        ex.printStackTrace();
-                    }
-
-                    textArea1.append(getNickname() + ": " + text + "\n");
+                    connection.send(message);
+                    //textArea1.append(getNickname() + ": " + textField1.getText() + "\n");
                     textField1.setText("");
                 }
-
             }
         });
     }
 
     @Override
     public void connectionCreated(ConnectionInterface connection) {
-        connections.add(connection);
-        System.out.println("Connection was added");
+        System.out.println("Client connection was created");
     }
 
     @Override
     public void connectionClosed(ConnectionInterface connection) {
-        connections.remove(connection);
-        System.out.println("Connection was closed");
+        System.out.println("Client connection was closed");
     }
 
     @Override
     public void connectionException(ConnectionInterface connection, Exception e) {
-        connectionClosed(connection);
-        System.out.println("Exception");
         e.printStackTrace();
     }
 
     @Override
     public void receivedContent(MessageInterface message) {
+//        textArea1.append(message.toString());
         textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
-        for (ConnectionInterface connection : connections) {
-            connection.send(message);
-        }
-    }
-
-    public void start() {
-        System.out.println("Server started");
-        Thread t = new Thread(this);
-        t.setPriority(Thread.MIN_PRIORITY);
-        t.start();
-
-    }
-
-    public void stop() {
-        try {
-            needToNewConnection = false;
-            serverSocket.close();
-            connections = null;
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
+//        textArea1.append("\n");
     }
 
     public static void main(String[] args) {
-        Server server = new Server("Simple Chat Server");
-        server.setVisible(true);
-        //server.start();
+        Client client = new Client("Simple Chat Client");
+        client.setVisible(true);
+        Client client2 = new Client("Simple Chat Client");
+        client2.setVisible(true);
     }
 
-    @Override
-    public void run() {
-        while (needToNewConnection) {
-            try {
-                Socket socket = serverSocket.accept();
-                connectionCreated(new Connection(socket, this));
-                Thread.sleep(200);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }
