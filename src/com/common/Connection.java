@@ -8,11 +8,29 @@ import java.net.ConnectException;
 import java.net.Socket;
 
 public class Connection implements ConnectionInterface, Runnable {
+    public Socket getSocket() {
+        return socket;
+    }
+
+    public ConnectionListenerInterface getConnectionListener() {
+        return connectionListener;
+    }
+
     private Socket socket;
     private ConnectionListenerInterface connectionListener;
     private boolean needToRun = true;
     private OutputStream out;
     private InputStream in;
+
+    public void setNick(String nick) {
+        this.nick = nick;
+    }
+
+    public String getNick() {
+        return nick;
+    }
+
+    private String nick;
 
     public Connection(Socket socket, ConnectionListenerInterface connectionListener) {
         try {
@@ -37,6 +55,7 @@ public class Connection implements ConnectionInterface, Runnable {
             objectOut = new ObjectOutputStream(out);
             objectOut.writeObject(message);
         } catch(Exception e) {
+            System.out.println("Exception in connection::send");
             e.printStackTrace();
         }
     }
@@ -54,13 +73,19 @@ public class Connection implements ConnectionInterface, Runnable {
                 if (amount != 0) {
                     ObjectInputStream objectIn = new ObjectInputStream(in);
                     MessageInterface message = (MessageInterface) objectIn.readObject();
-                    connectionListener.receivedContent(message);
+                    connectionListener.receivedContent(this, message);
                 } else {
                     Thread.sleep(200);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+
+        try {
+            socket.close();
+        } catch(Exception e) {
+            e.printStackTrace();
         }
     }
 }

@@ -15,15 +15,22 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class Server extends JFrame implements ConnectionListenerInterface, Runnable {
-    JPanel panel1;
+    private JPanel panel1;
     private JTextArea textArea1;
     private JTextField textField1;
     private JButton buttonSend;
     private JScrollPane scrollPane;
     boolean listen;
     boolean needToNewConnection = true;
+
+    public Set<ConnectionInterface> getConnections() {
+        return connections;
+    }
+
     Set<ConnectionInterface> connections;
     ServerSocket serverSocket;
+    Clients clients;
+    Banned banned;
 
     public void clearTextArea() {
         textArea1.setText("");
@@ -64,8 +71,6 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     public Server(String title) {
         super(title);
 
-
-
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setPreferredSize(new Dimension(400, 450));
@@ -83,6 +88,22 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
             public void actionPerformed(ActionEvent e) {
                 Listener listener = new Listener(Server.this);
                 listener.setVisible(true);
+            }
+        });
+        clients = new Clients(Server.this);
+        JMenuItem clientsItem = new JMenuItem("Clients");
+        fileMenu.add(clientsItem);
+        clientsItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                clients.setVisible(true);
+            }
+        });
+        banned = new Banned(Server.this);
+        JMenuItem bannedItem = new JMenuItem("Banned");
+        fileMenu.add(bannedItem);
+        bannedItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                banned.setVisible(true);
             }
         });
         fileMenu.addSeparator();
@@ -150,16 +171,38 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
                 textField1.setText("");
             }
         });
+        setVisible(true);
+
+    }
+
+    public void createListener() {
+        Listener listener = new Listener(Server.this);
+        listener.setVisible(true);
     }
 
     @Override
     public void connectionCreated(ConnectionInterface connection) {
+//        clients.getList1().add()
+//        listModel.add(listModel.getSize(), new Item("Nick", "IP", new Socket()));
+        clients.getListModel().add(clients.getListModel().getSize(),
+                new Item("Nick",
+                        connection.getSocket().getInetAddress().getHostAddress(),
+                        connection.getSocket()));
+//        System.out.println("New hostname: " + connection.getSocket().getInetAddress().getHostName());
+//        System.out.println("New host IP: " + connection.getSocket().getInetAddress().getHostAddress());
         connections.add(connection);
-        System.out.println("Connection was added");
+
+        Message message = new Message("", "", Message.GET_NICK_TYPE);
+        connection.send(message);
+
+//        System.out.println("Connection was added");
+        System.out.println("Send GET_NICK_TYPE");
     }
 
     @Override
     public synchronized void connectionClosed(ConnectionInterface connection) {
+        Message message = new Message("", "Get nick type message", Message.CLOSE_TYPE);
+        connection.send(message);
         connections.remove(connection);
         System.out.println("Connection was closed");
     }
@@ -172,11 +215,41 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     }
 
     @Override
-    public synchronized void receivedContent(MessageInterface message) {
-        textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
-        for (ConnectionInterface connection : connections) {
-            connection.send(message);
+    public synchronized void receivedContent(ConnectionInterface connection, MessageInterface message) {
+        switch(message.getType()) {
+            case Message.CONTENT_TYPE:
+                textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
+                for (ConnectionInterface connection1 : connections) {
+                    connection1.send(message);
+                }
+                break;
+            case Message.CLOSE_TYPE:
+                Item item;
+                for (int index = 0; index < clients.getListModel().getSize(); index++) {
+                    item = (Item) clients.getListModel().get(index);
+                    if (item.getSocket() == connection.getSocket()) {
+                        clients.getListModel().remove(index);
+                        connectionClosed(connection);
+                        break;
+                    }
+                }
+                break;
+            case Message.GET_NICK_TYPE:
+                connection.setNick(message.getNick());
+                for (int index = 0; index < clients.getListModel().getSize(); index++) {
+                    item = (Item) clients.getListModel().get(index);
+                    if (item.getSocket() == connection.getSocket()) {
+                        clients.getListModel().set(index, new Item(connection.getNick(),
+                                connection.getSocket().getInetAddress().getHostAddress(),
+                                connection.getSocket()));
+
+                        break;
+                    }
+                }
+                System.out.println("Received GET_NICK_TYPE: " + connection.getNick());
+                break;
         }
+
     }
 
     public void start() {

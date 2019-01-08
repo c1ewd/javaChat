@@ -142,6 +142,12 @@ public class Client extends JFrame implements ConnectionListenerInterface {
                 textField1.setText("");
             }
         });
+        setVisible(true);
+    }
+
+    public void createConnector() {
+        Connector connector = new Connector(Client.this);
+        connector.setVisible(true);
     }
 
     @Override
@@ -151,6 +157,8 @@ public class Client extends JFrame implements ConnectionListenerInterface {
 
     @Override
     public void connectionClosed(ConnectionInterface connection) {
+        Message message = new Message("", "", Message.CLOSE_TYPE);
+        connection.send(message);
         connection.close();
         System.out.println("Client connection was closed");
     }
@@ -161,9 +169,28 @@ public class Client extends JFrame implements ConnectionListenerInterface {
     }
 
     @Override
-    public void receivedContent(MessageInterface message) {
+    public void receivedContent(ConnectionInterface connection, MessageInterface message) {
 //        textArea1.append(message.toString());
-        textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
+        switch (message.getType()) {
+            case Message.CONTENT_TYPE:
+                textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
+                break;
+            case Message.CLOSE_TYPE:
+                connection.close();
+                setDisableComponents();
+                connect = false;
+                JOptionPane.showMessageDialog(this,
+                        "Server closed connection",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                break;
+            case Message.GET_NICK_TYPE:
+                Message message1 = new Message(getNickname(), "Get nick type message", Message.GET_NICK_TYPE);
+                connection.send(message1);
+                System.out.println("Received GET_NICK_TYPE and Send GET_NICK_TYPE");
+                break;
+        }
+
 //        textArea1.append("\n");
     }
 
