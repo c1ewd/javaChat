@@ -1,8 +1,10 @@
 package com.server;
 
 import com.common.*;
+import com.common.Popup;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
@@ -13,9 +15,10 @@ import java.util.Set;
 
 public class Server extends JFrame implements ConnectionListenerInterface, Runnable {
     private JPanel panel1;
-    private JTextArea textArea1;
+//    private JTextArea textArea1;
     private JTextField textField1;
     private JButton buttonSend;
+    private JTable table1;
     private JScrollPane scrollPane;
     boolean listen;
     boolean needToNewConnection = true;
@@ -28,9 +31,11 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     ServerSocket serverSocket;
     Clients clients;
     Banned banned;
+    int messageId;
+    DefaultTableModel tableModel;
 
     public void clearTextArea() {
-        textArea1.setText("");
+//        textArea1.setText("");
     }
 
     public void setNickname(String nickname) {
@@ -54,13 +59,13 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     private int port = Connection.PORT;
 
     public void setEnableComponents() {
-        textArea1.setEnabled(true);
+//        textArea1.setEnabled(true);
         textField1.setEnabled(true);
         buttonSend.setEnabled(true);
     }
 
     public void setDisableComponents() {
-        textArea1.setEnabled(false);
+//        textArea1.setEnabled(false);
         textField1.setEnabled(false);
         buttonSend.setEnabled(false);
     }
@@ -68,15 +73,55 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     public Server(String title) {
         super(title);
 
+        JPanel mainPanel = new JPanel(){
+            @Override
+            public boolean isOptimizedDrawingEnabled() {
+                return false;
+            }
+        };
+        mainPanel.setLayout(new OverlayLayout(mainPanel));
+        setContentPane(mainPanel);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setPreferredSize(new Dimension(400, 450));
         setResizable(false);
-        setContentPane(panel1);
+//        setContentPane(panel1);
         setDisableComponents();
 
-        scrollPane = new JScrollPane(textArea1);
-        getContentPane().add(scrollPane);
+//        JTable table1 = new JTable();
+
+        scrollPane = new JScrollPane(table1);
+//        scrollPane = new JScrollPane(textArea1);
+//        getContentPane().add(scrollPane);
+//        panel1.add(scrollPane);
+
+
+        panel1.add(scrollPane);
+//        panel1.add(table1);
+//        mainPanel.add(scrollPane);
+
+        tableModel = new DefaultTableModel();
+        table1.setModel(tableModel);
+
+        tableModel.addColumn("Column 1");
+
+        /*
+        for(int i = 0; i < 500; i++)
+//            tableModel.insertRow(tableModel.getRowCount(), new Object[] { item });
+            tableModel.insertRow(tableModel.getRowCount(), new Object[] { new Message (messageId++, "New", "New very very very very very very very very very very very very very very very very very very very very very long message from server", MessageInterface.CONTENT_TYPE) });
+*/
+
+        table1.getColumnModel().getColumn(0).setCellRenderer(new CellRenderer());
+        table1.setTableHeader(null);
+        table1.setShowGrid(false);
+        table1.setRowHeight(25);
+        table1.setDragEnabled(false);
+        table1.setRowSelectionAllowed(false);
+        table1.setCellSelectionEnabled(false);
+        table1.setDefaultEditor(Object.class, null);
+
+
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenuItem listenerItem = new JMenuItem("Listener");
@@ -136,20 +181,22 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
         pack();
         setLocationByPlatform(true);
         setLocationRelativeTo(null);
-        textArea1.setEditable(false);
+//        textArea1.setEditable(false);
         buttonSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                  if (!textField1.getText().isEmpty()) {
                     String text = textField1.getText().trim();
                     System.out.println(text);
-                    Message message = new Message(getNickname(), text, Message.CONTENT_TYPE);
+                    Message message = new Message(messageId, getNickname(), text, Message.CONTENT_TYPE);
 
                     for (ConnectionInterface connection : connections) {
                         connection.send(message);
                     }
 
-                    textArea1.append(getNickname() + ": " + text + "\n");
+
+//                    textArea1.append(getNickname() + ": " + text + "\n");
+                    tableModel.insertRow(messageId++, new Object[] { message });
                     textField1.setText("");
                 }
 
@@ -166,16 +213,43 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
                     return;
 
                 String text = textField1.getText().trim();
-                Message message = new Message(getNickname(), text, Message.CONTENT_TYPE);
+                Message message = new Message(messageId, getNickname(), text, Message.CONTENT_TYPE);
 
                 for (ConnectionInterface connection : connections) {
                     connection.send(message);
                 }
 
-                textArea1.append(getNickname() + ": " + text + "\n");
+//                textArea1.append(getNickname() + ": " + text + "\n");
+                tableModel.insertRow(messageId++, new Object[] { message });
                 textField1.setText("");
             }
         });
+        JPanel popupPanel = Popup.createPopupPanel(scrollPane);
+        popupPanel.setAlignmentX(0.5f);
+        popupPanel.setAlignmentY(0.1f);
+//        popupPanel.setBounds(new Rectangle(50, 50, 75, 75));
+
+        JScrollBar verticalScroll = scrollPane.getVerticalScrollBar();
+        verticalScroll.addAdjustmentListener(new AdjustmentListener()
+        {
+            public void adjustmentValueChanged(AdjustmentEvent e)
+            {
+                if (!e.getValueIsAdjusting()) {
+
+                    if (verticalScroll.getValue() + verticalScroll.getModel().getExtent() * 10 < verticalScroll.getMaximum()) {
+                        mainPanel.setFocusable(true);
+                        popupPanel.setVisible(true);
+                    } else {
+                        popupPanel.setVisible(false);
+                    }
+                }
+            }
+        });
+
+
+        mainPanel.add(popupPanel);
+        mainPanel.add(panel1);
+//        mainPanel.add(scrollPane);
         setVisible(true);
 
     }
@@ -197,7 +271,7 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
 //        System.out.println("New host IP: " + connection.getSocket().getInetAddress().getHostAddress());
         connections.add(connection);
 
-        Message message = new Message("", "", Message.GET_NICK_TYPE);
+        Message message = new Message(messageId,"", "", Message.GET_NICK_TYPE);
         connection.send(message);
 
 //        System.out.println("Connection was added");
@@ -206,7 +280,7 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
 
     @Override
     public synchronized void connectionClosed(ConnectionInterface connection) {
-        Message message = new Message("", "Get nick type message", Message.CLOSE_TYPE);
+        Message message = new Message(messageId,"", "Get nick type message", Message.CLOSE_TYPE);
         connection.send(message);
         connections.remove(connection);
         System.out.println("Connection was closed");
@@ -223,10 +297,13 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
     public synchronized void receivedContent(ConnectionInterface connection, MessageInterface message) {
         switch(message.getType()) {
             case Message.CONTENT_TYPE:
-                textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
+//                textArea1.append(message.getNick() + ": " + message.getContent() + "\n");
+                Message message1 = new Message(messageId, message.getNick(), message.getContent(), message.getType());
                 for (ConnectionInterface connection1 : connections) {
-                    connection1.send(message);
+                    connection1.send(message1);
                 }
+                tableModel.insertRow(tableModel.getRowCount(), new Object[] { message1 });
+                messageId++;
                 break;
             case Message.CLOSE_TYPE:
                 ClientsDialogItem item;
@@ -252,6 +329,46 @@ public class Server extends JFrame implements ConnectionListenerInterface, Runna
                     }
                 }
                 System.out.println("Received GET_NICK_TYPE: " + connection.getNick());
+                break;
+            case Message.GET_HISTORY:
+                System.out.println("Received GET_HISTORY_TYPE: with " + message.getId() + " id");
+                if (message.getId() < -1 || message.getId() > messageId) {
+                    System.out.println("Message range of out");
+                    return;
+                }
+                Message message2;
+                if (message.getId() == -1) {
+                    System.out.println("GET HISTORY BY -1");
+                    for(int i = 0; i < Message.MESSAGES_HISTORY_COUNT; i++) {
+                        if (messageId - i - 1 < 0)
+                            break;
+                        System.out.println(i);
+
+                        message1 = (Message) tableModel.getValueAt(messageId - i - 1, 0);
+                        message2 = new Message(message1.getId(),
+                                message1.getNick(), message1.getContent(), Message.GET_HISTORY);
+                        connection.send(message2);
+                        System.out.println(message1.getId());
+
+                    }
+                    message1 = new Message(messageId, getNickname(), "End of history", Message.END_HISTORY);
+                    connection.send(message1);
+
+                    break;
+                }
+
+                for(int i = 0; i < Message.MESSAGES_HISTORY_COUNT; i++) {
+                    if (message.getId() - i - 1 < 0)
+                        break;
+                    message1 = (Message) tableModel.getValueAt(message.getId() - i - 1, 0);
+                    message2 = new Message(message1.getId(),
+                            message1.getNick(), message1.getContent(), Message.GET_HISTORY);
+                    connection.send(message2);
+                    System.out.println(message1.getId());
+                }
+                message1 = new Message(messageId, getNickname(), "End of history", Message.END_HISTORY);
+                connection.send(message1);
+
                 break;
         }
 
